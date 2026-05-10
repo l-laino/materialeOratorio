@@ -1,19 +1,33 @@
 'use strict';
 
-/* ────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════ */
+const ICONS = [
+  '✏️','📎','📏','🖊️','📌','📋','📝','🗒️',
+  '⚽','🏀','🏐','🎾','🏓','🥅','🎯','🏋️',
+  '🔧','🔨','🪛','🪚','🔩','⚙️','🗜️','🪝',
+  '🍽️','🍴','🥄','🧂','🍲','🫙','🥡','🧃',
+  '🧹','🪣','🧽','🧴','🧼','🪥','🫧','🗑️',
+  '🩹','💊','🩺','🧰','🩻','🏥','💉','🌡️',
+  '📦','🎒','🧳','🪜','📚','🎨','🎵','⭐',
+  '🚗','⛺','🏕️','🌿','🌸','🎉','🔋','💡',
+];
+
+/* ════════════════════════════════════════════
    DATA MODEL
-──────────────────────────────────────────── */
-const CATEGORIES = [
-  { id: 'cancelleria',    label: 'Cancelleria',          icon: '✏️', color: '#EFF6FF', iconBg: '#EFF6FF' },
-  { id: 'attrezzatura',  label: 'Attrezzatura sportiva', icon: '⚽', color: '#F0FDF4', iconBg: '#F0FDF4' },
-  { id: 'attrezzi',      label: 'Attrezzi',              icon: '🔧', color: '#FFFBEB', iconBg: '#FFFBEB' },
-  { id: 'pranzo',        label: 'Pranzo',                icon: '🍽️', color: '#FFF0F3', iconBg: '#FFF0F3' },
-  { id: 'pulizie',       label: 'Pulizie',               icon: '🧹', color: '#F0FDF4', iconBg: '#F0FDF4' },
-  { id: 'primosoccorso', label: 'Primo soccorso',        icon: '🩹', color: '#FFF1F2', iconBg: '#FFF1F2' },
+════════════════════════════════════════════ */
+const DEFAULT_CATS = [
+  { id: 'cancelleria',    label: 'Cancelleria',          icon: '✏️' },
+  { id: 'attrezzatura',  label: 'Attrezzatura sportiva', icon: '⚽' },
+  { id: 'attrezzi',      label: 'Attrezzi',              icon: '🔧' },
+  { id: 'pranzo',        label: 'Pranzo',                icon: '🍽️' },
+  { id: 'pulizie',       label: 'Pulizie',               icon: '🧹' },
+  { id: 'primosoccorso', label: 'Primo soccorso',        icon: '🩹' },
 ];
 
 const DEFAULT_ITEMS = {
-  cancelleria: [
+  cancelleria:   [
     { name: 'Fogli bianchi',   min: 100, have: 0 },
     { name: 'Forbici',         min: 5,   have: 0 },
     { name: 'Matite',          min: 10,  have: 0 },
@@ -22,7 +36,7 @@ const DEFAULT_ITEMS = {
     { name: 'Gomme',           min: 5,   have: 0 },
     { name: 'Nastro adesivo',  min: 3,   have: 0 },
   ],
-  attrezzatura: [
+  attrezzatura:  [
     { name: 'Palloni morbidi',     min: 4,  have: 0 },
     { name: 'Pompette',            min: 2,  have: 0 },
     { name: 'Cinesini',            min: 20, have: 0 },
@@ -30,12 +44,12 @@ const DEFAULT_ITEMS = {
     { name: 'Palline biliardino',  min: 6,  have: 0 },
     { name: 'Spugne',              min: 5,  have: 0 },
   ],
-  attrezzi: [
+  attrezzi:      [
     { name: 'Ghiaccio spray',  min: 2, have: 0 },
     { name: 'Cacciaviti',      min: 2, have: 0 },
     { name: 'Martello',        min: 1, have: 0 },
   ],
-  pranzo: [
+  pranzo:        [
     { name: 'Scottex',        min: 10, have: 0 },
     { name: 'Tovagliette',    min: 50, have: 0 },
     { name: 'Forchette',      min: 50, have: 0 },
@@ -43,7 +57,7 @@ const DEFAULT_ITEMS = {
     { name: 'Bicchieri',      min: 50, have: 0 },
     { name: 'Sacchi rifiuti', min: 10, have: 0 },
   ],
-  pulizie: [
+  pulizie:       [
     { name: 'Scope',                min: 4,  have: 6  },
     { name: 'Palette',              min: 3,  have: 3  },
     { name: 'Moci',                 min: 4,  have: 8  },
@@ -64,21 +78,46 @@ const DEFAULT_ITEMS = {
   ],
 };
 
-/* ────────────────────────────────────────────
-   STATE & PERSISTENCE
-──────────────────────────────────────────── */
-let state = loadState();
-let openCats = new Set(CATEGORIES.map(c => c.id));
-let addingCat = null;
+const CAT_COLORS = [
+  '#EFF6FF','#F0FDF4','#FFFBEB','#FFF0F3','#F5F0FF','#FFF1F2',
+  '#F0F9FF','#FEFCE8','#F7FEE7','#FDF4FF','#FFF7ED','#F0FDFA',
+];
 
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let state = loadState();
+let openCats = new Set(state.categories ? state.categories.map(c => c.id) : []);
+let addingCat = null;
+let catSort = 'custom';
+let itemSorts = {}; // catId -> 'custom' | 'alpha' | 'qty' | 'avail'
+
+// Modal state
+let modalMode = null;   // 'add-oratorio' | 'rename-oratorio' | 'add-cat' | 'edit-cat'
+let modalTarget = null; // oratorio name or cat id
+let selectedIcon = '📦';
+
+/* ════════════════════════════════════════════
+   PERSISTENCE
+════════════════════════════════════════════ */
 function loadState() {
   try {
-    const raw = localStorage.getItem('oratori_v2');
-    if (raw) return JSON.parse(raw);
+    const raw = localStorage.getItem('toolbox_v1');
+    if (raw) {
+      const s = JSON.parse(raw);
+      // back-compat: ensure categories array exists
+      if (!s.categories) s.categories = DEFAULT_CATS.map(c => ({...c}));
+      return s;
+    }
   } catch(e) {}
+  return makeDefaultState();
+}
+
+function makeDefaultState() {
   return {
     list: ['Pombio', '13'],
     current: 'Pombio',
+    categories: DEFAULT_CATS.map(c => ({...c})),
     data: {
       Pombio: deepClone(DEFAULT_ITEMS),
       '13': deepClone(DEFAULT_ITEMS),
@@ -87,15 +126,16 @@ function loadState() {
 }
 
 function save() {
-  try { localStorage.setItem('oratori_v2', JSON.stringify(state)); } catch(e) {}
+  try { localStorage.setItem('toolbox_v1', JSON.stringify(state)); } catch(e) {}
 }
 
 function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
 function cur() { return state.data[state.current]; }
+function uid() { return Math.random().toString(36).slice(2, 9); }
 
-/* ────────────────────────────────────────────
-   STATUS HELPERS
-──────────────────────────────────────────── */
+/* ════════════════════════════════════════════
+   STATUS
+════════════════════════════════════════════ */
 function getStatus(item) {
   if (item.have === 0 && item.min > 0) return 'miss';
   if (item.have < item.min) return 'warn';
@@ -109,44 +149,52 @@ function badgeHtml(catId) {
   const warn = items.filter(i => getStatus(i) === 'warn').length;
   if (miss > 0) return `<span class="cat-badge badge-miss">${miss} mancant${miss===1?'e':'i'}</span>`;
   if (warn > 0) return `<span class="cat-badge badge-warn">${warn} in scarsità</span>`;
-  return `<span class="cat-badge badge-ok">tutto ok</span>`;
+  return `<span class="cat-badge badge-ok">tutto ok ✓</span>`;
 }
 
-/* ────────────────────────────────────────────
-   ESCAPE HELPERS
-──────────────────────────────────────────── */
+/* ════════════════════════════════════════════
+   ESCAPE
+════════════════════════════════════════════ */
 function esc(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function escAttr(str) { return esc(str); }
+function escAttr(s) { return esc(s); }
 
-/* ────────────────────────────────────────────
+/* ════════════════════════════════════════════
    RENDER
-──────────────────────────────────────────── */
+════════════════════════════════════════════ */
 function render() {
   renderTabs();
   renderSummary();
   renderCategories();
 }
 
+/* ── TABS ── */
 function renderTabs() {
   const el = document.getElementById('oratorio-tabs');
-  el.innerHTML = state.list.map(o =>
-    `<button class="oratorio-tab${o===state.current?' active':''}"
-      onclick="switchOratorio('${escAttr(o)}')"
-      role="tab"
-      aria-selected="${o===state.current}">${esc(o)}</button>`
-  ).join('');
+  el.innerHTML = state.list.map(o => {
+    const active = o === state.current;
+    return `<div class="oratorio-tab-wrap${active?' active':''}">
+      <button class="oratorio-tab" onclick="switchOratorio('${escAttr(o)}')" role="tab" aria-selected="${active}">${esc(o)}</button>
+      <div class="oratorio-tab-actions">
+        <button class="oratorio-tab-btn" onclick="openModalRenameOratorio('${escAttr(o)}')" title="Rinomina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="oratorio-tab-btn del" onclick="deleteOratorio('${escAttr(o)}')" title="Elimina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
+/* ── SUMMARY ── */
 function renderSummary() {
   const data = cur();
   let tot=0, ok=0, warn=0, miss=0;
-  CATEGORIES.forEach(cat => {
+  state.categories.forEach(cat => {
     (data[cat.id]||[]).forEach(item => {
       tot++;
       const s = getStatus(item);
@@ -156,36 +204,68 @@ function renderSummary() {
     });
   });
   document.getElementById('summary').innerHTML = `
-    <div class="summary-card"><div class="s-num">${tot}</div><div class="s-label">Totale voci</div></div>
+    <div class="summary-card"><div class="s-num">${tot}</div><div class="s-label">Totale</div></div>
     <div class="summary-card s-ok"><div class="s-num">${ok}</div><div class="s-label">Sufficienti</div></div>
     <div class="summary-card s-warn"><div class="s-num">${warn}</div><div class="s-label">Pochi</div></div>
     <div class="summary-card s-miss"><div class="s-num">${miss}</div><div class="s-label">Mancanti</div></div>
   `;
 }
 
+/* ── CATEGORIES ── */
+function getSortedCats() {
+  const cats = [...state.categories];
+  if (catSort === 'alpha') cats.sort((a,b) => a.label.localeCompare(b.label, 'it'));
+  return cats;
+}
+
+function getSortedItems(catId) {
+  const items = [...(cur()[catId] || [])];
+  const sort = itemSorts[catId] || 'custom';
+  if (sort === 'alpha') items.sort((a,b) => a.name.localeCompare(b.name, 'it'));
+  else if (sort === 'qty') items.sort((a,b) => b.min - a.min);
+  else if (sort === 'avail') items.sort((a,b) => b.have - a.have);
+  return items;
+}
+
 function renderCategories() {
   const data = cur();
   const container = document.getElementById('categories');
-  container.innerHTML = CATEGORIES.map(cat => {
-    const items = data[cat.id] || [];
+  const cats = getSortedCats();
+
+  container.innerHTML = cats.map((cat, catIdx) => {
+    const items = getSortedItems(cat.id);
     const open = openCats.has(cat.id);
+    const currentSort = itemSorts[cat.id] || 'custom';
+    const color = CAT_COLORS[catIdx % CAT_COLORS.length];
 
     const rows = items.map((item, idx) => {
+      // find real index in original array for mutations
+      const realIdx = (cur()[cat.id] || []).findIndex(i => i === item);
       const s = getStatus(item);
-      const pipCls = s==='ok'?'pip-ok':s==='warn'?'pip-warn':'pip-miss';
-      const inputCls = s==='ok'?'':s==='warn'?' warn':' miss';
-      return `<tr>
+      const rowCls = s === 'miss' ? 'row-miss' : s === 'warn' ? 'row-warn' : 'row-ok';
+      const inputCls = s === 'ok' ? '' : s === 'warn' ? ' warn' : ' miss';
+      const statusLabel = s === 'ok'
+        ? '<span class="status-badge ok">OK ✓</span>'
+        : s === 'warn'
+          ? '<span class="status-badge warn">Pochi !</span>'
+          : '<span class="status-badge miss">⚠ Mancante</span>';
+
+      return `<tr class="item-row ${rowCls}" draggable="true"
+          data-cat="${escAttr(cat.id)}" data-idx="${realIdx}">
         <td>
           <div class="item-name">
-            <span class="status-pip ${pipCls}" title="${s==='ok'?'Sufficiente':s==='warn'?'In scarsità':'Mancante'}"></span>
+            <span class="item-drag-handle" title="Trascina">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+            </span>
             ${esc(item.name)}
+            ${statusLabel}
           </div>
         </td>
         <td class="c">
           <div class="num-wrap">
             <input class="num-input" type="number" min="0" value="${item.min}"
-              aria-label="Minimo necessario per ${esc(item.name)}"
-              onchange="updateMin('${cat.id}',${idx},this.value)"
+              aria-label="Minimo per ${esc(item.name)}"
+              onchange="updateMin('${escAttr(cat.id)}',${realIdx},this.value)"
               onkeydown="if(event.key==='Enter')this.blur()" />
           </div>
         </td>
@@ -193,14 +273,13 @@ function renderCategories() {
           <div class="num-wrap">
             <input class="num-input${inputCls}" type="number" min="0" value="${item.have}"
               aria-label="Disponibili di ${esc(item.name)}"
-              onchange="updateHave('${cat.id}',${idx},this.value)"
+              onchange="updateHave('${escAttr(cat.id)}',${realIdx},this.value)"
               onkeydown="if(event.key==='Enter')this.blur()" />
           </div>
         </td>
         <td class="c">
-          <button class="btn btn-ghost btn-danger" onclick="delItem('${cat.id}',${idx})"
-            title="Elimina ${esc(item.name)}" aria-label="Elimina ${esc(item.name)}" style="padding:5px 8px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          <button class="btn-icon danger" onclick="delItem('${escAttr(cat.id)}',${realIdx})" title="Elimina">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </button>
         </td>
       </tr>`;
@@ -209,44 +288,67 @@ function renderCategories() {
     const addRow = addingCat === cat.id
       ? `<div class="cat-footer">
           <input class="add-input" id="add-input-${cat.id}" placeholder="Nome materiale…"
-            onkeydown="handleAddKey(event,'${cat.id}')" />
-          <button class="btn" style="padding:6px 12px;" onclick="confirmAdd('${cat.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            OK
-          </button>
-          <button class="btn btn-ghost" onclick="cancelAdd()" style="padding:6px 10px;" aria-label="Annulla">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+            onkeydown="handleAddKey(event,'${escAttr(cat.id)}')" />
+          <button class="btn btn-primary btn-sm" onclick="confirmAdd('${escAttr(cat.id)}')">OK</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelAdd()">✕</button>
         </div>`
       : `<div class="cat-footer">
-          <button class="btn btn-ghost" style="font-size:12px; gap:5px;" onclick="startAdd('${cat.id}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Aggiungi materiale
+          <button class="btn btn-ghost" style="font-size:13px;" onclick="startAdd('${escAttr(cat.id)}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Aggiungi voce
           </button>
         </div>`;
 
-    return `<div class="cat-card" id="cat-${cat.id}">
-      <div class="cat-header" onclick="toggleCat('${cat.id}')" role="button" tabindex="0"
-        aria-expanded="${open}" aria-controls="cat-body-${cat.id}"
-        onkeydown="if(event.key==='Enter'||event.key===' ')toggleCat('${cat.id}')">
-        <div class="cat-icon" style="background:${cat.color};" aria-hidden="true">${cat.icon}</div>
-        <span class="cat-title">${cat.label}</span>
+    const sortPills = ['custom','alpha','qty','avail'].map(s => {
+      const labels = { custom:'Manuale', alpha:'A→Z', qty:'Quantità', avail:'Disponibili' };
+      return `<button class="item-sort-pill${currentSort===s?' active':''}" onclick="setItemSort('${escAttr(cat.id)}','${s}')">${labels[s]}</button>`;
+    }).join('');
+
+    const itemToolbar = open ? `
+      <div class="cat-item-toolbar">
+        <span class="item-sort-label">Ordina:</span>
+        <div class="item-sort-pills">${sortPills}</div>
+      </div>` : '';
+
+    return `<div class="cat-card" id="cat-${cat.id}"
+        draggable="${catSort==='custom'?'true':'false'}"
+        data-cat-id="${escAttr(cat.id)}">
+      <div class="cat-header" onclick="toggleCat('${escAttr(cat.id)}')" role="button" tabindex="0"
+        aria-expanded="${open}"
+        onkeydown="if(event.key==='Enter'||event.key===' ')toggleCat('${escAttr(cat.id)}')">
+        ${catSort==='custom' ? `<span class="drag-handle" onclick="event.stopPropagation()" title="Trascina">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        </span>` : ''}
+        <div class="cat-icon" style="background:${color};">${cat.icon}</div>
+        <span class="cat-title">${esc(cat.label)}</span>
         <span class="cat-meta">${items.length} voci</span>
         ${badgeHtml(cat.id)}
-        <svg class="chevron${open?' open':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        <div class="cat-actions" onclick="event.stopPropagation()">
+          <button class="btn-icon" onclick="openModalEditCat('${escAttr(cat.id)}')" title="Modifica categoria">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon danger" onclick="deleteCat('${escAttr(cat.id)}')" title="Elimina categoria">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+        <div class="chevron${open?' open':''}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
       </div>
-      ${open ? `<div class="cat-body" id="cat-body-${cat.id}" role="region" aria-label="${cat.label}">
-        <table class="items-table" aria-label="Materiali ${cat.label}">
-          <thead><tr>
-            <th>Materiale</th>
-            <th class="c">Min. necessario</th>
-            <th class="c">Disponibili</th>
-            <th></th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        ${addRow}
-      </div>` : ''}
+      ${open ? `
+        ${itemToolbar}
+        <div class="cat-body" id="cat-body-${cat.id}">
+          <table class="items-table">
+            <thead><tr>
+              <th>Materiale</th>
+              <th class="c">Min. necessario</th>
+              <th class="c">Disponibili</th>
+              <th class="c"></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          ${addRow}
+        </div>` : ''}
     </div>`;
   }).join('');
 
@@ -254,17 +356,267 @@ function renderCategories() {
     const inp = document.getElementById('add-input-' + addingCat);
     if (inp) inp.focus();
   }
+
+  setupCatDrag();
+  setupItemDrag();
 }
 
-/* ────────────────────────────────────────────
-   ACTIONS
-──────────────────────────────────────────── */
+/* ════════════════════════════════════════════
+   DRAG & DROP — CATEGORIES
+════════════════════════════════════════════ */
+let dragCatId = null;
+
+function setupCatDrag() {
+  if (catSort !== 'custom') return;
+  document.querySelectorAll('.cat-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragCatId = card.dataset.catId;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('drag-over'));
+      dragCatId = null;
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (card.dataset.catId !== dragCatId) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const fromId = dragCatId;
+      const toId = card.dataset.catId;
+      if (fromId && fromId !== toId) {
+        reorderCats(fromId, toId);
+      }
+    });
+  });
+}
+
+function reorderCats(fromId, toId) {
+  const cats = state.categories;
+  const fi = cats.findIndex(c => c.id === fromId);
+  const ti = cats.findIndex(c => c.id === toId);
+  if (fi < 0 || ti < 0) return;
+  const [moved] = cats.splice(fi, 1);
+  cats.splice(ti, 0, moved);
+  save();
+  renderCategories();
+}
+
+/* ════════════════════════════════════════════
+   DRAG & DROP — ITEMS
+════════════════════════════════════════════ */
+let dragItemCat = null;
+let dragItemIdx = null;
+
+function setupItemDrag() {
+  document.querySelectorAll('.item-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragItemCat = row.dataset.cat;
+      dragItemIdx = parseInt(row.dataset.idx);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.item-row').forEach(r => r.classList.remove('drag-over-row'));
+      dragItemCat = null;
+      dragItemIdx = null;
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (row.dataset.cat === dragItemCat) row.classList.add('drag-over-row');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over-row'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over-row');
+      const toIdx = parseInt(row.dataset.idx);
+      if (dragItemCat === row.dataset.cat && dragItemIdx !== toIdx) {
+        reorderItems(dragItemCat, dragItemIdx, toIdx);
+      }
+    });
+  });
+}
+
+function reorderItems(catId, fromIdx, toIdx) {
+  const items = cur()[catId];
+  const [moved] = items.splice(fromIdx, 1);
+  items.splice(toIdx, 0, moved);
+  // reset to custom sort when manually dragged
+  itemSorts[catId] = 'custom';
+  save();
+  renderCategories();
+}
+
+/* ════════════════════════════════════════════
+   SORTING
+════════════════════════════════════════════ */
+function setCatSort(s) {
+  catSort = s;
+  document.querySelectorAll('#cat-sort-pills .sort-pill').forEach(b => {
+    b.classList.toggle('active', b.textContent.includes(s === 'alpha' ? 'A' : 'Manuale'));
+  });
+  renderCategories();
+}
+
+function setItemSort(catId, s) {
+  itemSorts[catId] = s;
+  renderCategories();
+}
+
+/* ════════════════════════════════════════════
+   ORATORIO ACTIONS
+════════════════════════════════════════════ */
 function switchOratorio(name) {
   state.current = name;
   save();
   render();
 }
 
+function deleteOratorio(name) {
+  if (state.list.length <= 1) { showToast('Devi avere almeno un oratorio'); return; }
+  if (!confirm(`Eliminare "${name}" e tutti i suoi dati?`)) return;
+  state.list = state.list.filter(o => o !== name);
+  delete state.data[name];
+  if (state.current === name) state.current = state.list[0];
+  save();
+  render();
+  showToast(`"${name}" eliminato`);
+}
+
+function openModalAddOratorio() {
+  modalMode = 'add-oratorio';
+  modalTarget = null;
+  document.getElementById('modal-oratorio-title').textContent = 'Nuovo oratorio';
+  document.getElementById('modal-oratorio-icon').textContent = '🏫';
+  document.getElementById('btn-confirm-oratorio').textContent = 'Aggiungi';
+  document.getElementById('input-oratorio-name').value = '';
+  openModal('modal-oratorio');
+}
+
+function openModalRenameOratorio(name) {
+  modalMode = 'rename-oratorio';
+  modalTarget = name;
+  document.getElementById('modal-oratorio-title').textContent = 'Rinomina oratorio';
+  document.getElementById('modal-oratorio-icon').textContent = '✏️';
+  document.getElementById('btn-confirm-oratorio').textContent = 'Salva';
+  document.getElementById('input-oratorio-name').value = name;
+  openModal('modal-oratorio');
+}
+
+function confirmOratorio() {
+  const name = document.getElementById('input-oratorio-name').value.trim();
+  if (!name) return;
+  if (modalMode === 'add-oratorio') {
+    if (state.list.includes(name)) { showToast('Oratorio già esistente'); return; }
+    state.list.push(name);
+    state.data[name] = deepClone(Object.fromEntries(
+      state.categories.map(c => [c.id, deepClone(DEFAULT_ITEMS[c.id] || [])])
+    ));
+    state.current = name;
+    showToast(`Oratorio "${name}" creato 🎉`);
+  } else {
+    const old = modalTarget;
+    if (name === old) { closeAllModals(); return; }
+    if (state.list.includes(name)) { showToast('Nome già in uso'); return; }
+    const idx = state.list.indexOf(old);
+    state.list[idx] = name;
+    state.data[name] = state.data[old];
+    delete state.data[old];
+    if (state.current === old) state.current = name;
+    showToast(`Rinominato in "${name}"`);
+  }
+  save();
+  closeAllModals();
+  render();
+}
+
+/* ════════════════════════════════════════════
+   CATEGORY ACTIONS
+════════════════════════════════════════════ */
+function openModalAddCat() {
+  modalMode = 'add-cat';
+  modalTarget = null;
+  selectedIcon = '📦';
+  document.getElementById('modal-cat-title').textContent = 'Nuova categoria';
+  document.getElementById('modal-cat-preview').textContent = '📦';
+  document.getElementById('input-cat-name').value = '';
+  buildIconPicker();
+  openModal('modal-cat');
+}
+
+function openModalEditCat(catId) {
+  modalMode = 'edit-cat';
+  modalTarget = catId;
+  const cat = state.categories.find(c => c.id === catId);
+  if (!cat) return;
+  selectedIcon = cat.icon;
+  document.getElementById('modal-cat-title').textContent = 'Modifica categoria';
+  document.getElementById('modal-cat-preview').textContent = cat.icon;
+  document.getElementById('input-cat-name').value = cat.label;
+  buildIconPicker();
+  openModal('modal-cat');
+}
+
+function buildIconPicker() {
+  const el = document.getElementById('icon-picker');
+  el.innerHTML = ICONS.map(ic =>
+    `<button class="icon-btn${ic===selectedIcon?' selected':''}" onclick="selectIcon('${ic}')">${ic}</button>`
+  ).join('');
+}
+
+function selectIcon(ic) {
+  selectedIcon = ic;
+  document.getElementById('modal-cat-preview').textContent = ic;
+  document.querySelectorAll('.icon-btn').forEach(b => b.classList.toggle('selected', b.textContent === ic));
+}
+
+function confirmCat() {
+  const name = document.getElementById('input-cat-name').value.trim();
+  if (!name) return;
+  if (modalMode === 'add-cat') {
+    const id = 'cat_' + uid();
+    state.categories.push({ id, label: name, icon: selectedIcon });
+    // create empty array for this category in all oratori
+    state.list.forEach(o => { state.data[o][id] = []; });
+    openCats.add(id);
+    showToast(`Categoria "${name}" aggiunta`);
+  } else {
+    const cat = state.categories.find(c => c.id === modalTarget);
+    if (cat) { cat.label = name; cat.icon = selectedIcon; }
+    showToast(`Categoria aggiornata`);
+  }
+  save();
+  closeAllModals();
+  render();
+}
+
+function deleteCat(catId) {
+  const cat = state.categories.find(c => c.id === catId);
+  if (!cat) return;
+  if (!confirm(`Eliminare la categoria "${cat.label}" e tutte le sue voci?`)) return;
+  state.categories = state.categories.filter(c => c.id !== catId);
+  state.list.forEach(o => { delete state.data[o][catId]; });
+  openCats.delete(catId);
+  save();
+  render();
+  showToast(`Categoria "${cat.label}" eliminata`);
+}
+
+function toggleCat(id) {
+  if (openCats.has(id)) openCats.delete(id);
+  else openCats.add(id);
+  renderCategories();
+}
+
+/* ════════════════════════════════════════════
+   ITEM ACTIONS
+════════════════════════════════════════════ */
 function updateMin(catId, idx, val) {
   cur()[catId][idx].min = Math.max(0, parseInt(val) || 0);
   save();
@@ -285,12 +637,6 @@ function delItem(catId, idx) {
   save();
   render();
   showToast(`"${name}" eliminato`);
-}
-
-function toggleCat(id) {
-  if (openCats.has(id)) openCats.delete(id);
-  else openCats.add(id);
-  renderCategories();
 }
 
 function startAdd(catId) {
@@ -321,38 +667,27 @@ function handleAddKey(e, catId) {
   if (e.key === 'Escape') cancelAdd();
 }
 
-/* ────────────────────────────────────────────
-   ORATORIO MODAL
-──────────────────────────────────────────── */
-function showModal() {
-  document.getElementById('modal').classList.add('open');
-  setTimeout(() => document.getElementById('modal-input').focus(), 50);
+/* ════════════════════════════════════════════
+   MODAL HELPERS
+════════════════════════════════════════════ */
+function openModal(id) {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById(id).classList.add('open');
+  // focus first input after animation
+  setTimeout(() => {
+    const inp = document.querySelector(`#${id} input`);
+    if (inp) inp.focus();
+  }, 60);
 }
 
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-  document.getElementById('modal-input').value = '';
+function closeAllModals() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
 }
 
-function confirmAddOratorio() {
-  const name = document.getElementById('modal-input').value.trim();
-  if (!name) return;
-  if (state.list.includes(name)) {
-    showToast('Oratorio già esistente', true);
-    return;
-  }
-  state.list.push(name);
-  state.data[name] = deepClone(DEFAULT_ITEMS);
-  state.current = name;
-  save();
-  closeModal();
-  render();
-  showToast(`Oratorio "${name}" creato`);
-}
-
-/* ────────────────────────────────────────────
+/* ════════════════════════════════════════════
    TOAST
-──────────────────────────────────────────── */
+════════════════════════════════════════════ */
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -362,137 +697,119 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-/* ────────────────────────────────────────────
+/* ════════════════════════════════════════════
    PDF EXPORT
-──────────────────────────────────────────── */
+════════════════════════════════════════════ */
 function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 18;
   const now = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
 
-  // Header block
-  doc.setFillColor(245, 243, 240);
-  doc.roundedRect(margin, 14, pageW - margin*2, 20, 3, 3, 'F');
+  doc.setFillColor(245, 243, 255);
+  doc.roundedRect(margin, 12, pageW - margin*2, 22, 3, 3, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(26, 25, 22);
-  doc.text(`Materiali — ${state.current}`, margin + 6, 23);
+  doc.setFontSize(15);
+  doc.setTextColor(28, 22, 48);
+  doc.text(`Lucas' Toolbox — ${state.current}`, margin + 6, 22);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(122, 117, 112);
-  doc.text(`Esportato il ${now}`, pageW - margin - 2, 23, { align: 'right' });
+  doc.setTextColor(90, 82, 112);
+  doc.text(`Esportato il ${now}`, pageW - margin - 2, 22, { align: 'right' });
 
-  // Summary row
   const data = cur();
   let totOk=0, totWarn=0, totMiss=0, totTot=0;
-  CATEGORIES.forEach(cat => {
+  state.categories.forEach(cat => {
     (data[cat.id]||[]).forEach(item => {
       totTot++;
       const s = getStatus(item);
-      if(s==='ok') totOk++;
-      else if(s==='warn') totWarn++;
-      else totMiss++;
+      if(s==='ok') totOk++; else if(s==='warn') totWarn++; else totMiss++;
     });
   });
   doc.setFontSize(8.5);
-  doc.setTextColor(122, 117, 112);
-  doc.text(`${totTot} voci totali  ·  ${totOk} sufficienti  ·  ${totWarn} in scarsità  ·  ${totMiss} mancanti`, margin + 6, 30);
+  doc.setTextColor(90, 82, 112);
+  doc.text(`${totTot} voci · ${totOk} ok · ${totWarn} in scarsità · ${totMiss} mancanti`, margin + 6, 30);
 
-  let y = 42;
+  let y = 44;
 
-  CATEGORIES.forEach(cat => {
+  state.categories.forEach(cat => {
     const items = (data[cat.id] || []);
     if (!items.length) return;
-
     if (y > pageH - 50) { doc.addPage(); y = 20; }
 
-    // Category header
-    doc.setFillColor(230, 230, 226);
+    doc.setFillColor(220, 214, 255);
     doc.roundedRect(margin, y - 4, pageW - margin*2, 10, 2, 2, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
-    doc.setTextColor(26, 25, 22);
-    doc.text(cat.label.toUpperCase(), margin + 4, y + 3);
+    doc.setTextColor(28, 22, 48);
+    doc.text(`${cat.icon}  ${cat.label.toUpperCase()}`, margin + 4, y + 3);
     y += 12;
 
-    // Table
     const tableRows = items.map(item => {
       const s = getStatus(item);
-      const statusLabel = s === 'ok' ? '✓' : s === 'warn' ? '!' : '✗';
-      return [item.name, item.min.toString(), item.have.toString(), statusLabel];
+      return [item.name, item.min.toString(), item.have.toString(),
+        s === 'ok' ? '✓' : s === 'warn' ? '!' : '✗'];
     });
 
     doc.autoTable({
       startY: y,
-      head: [['Materiale', 'Min. necessario', 'Disponibili', 'Stato']],
+      head: [['Materiale', 'Min.', 'Disponibili', 'Stato']],
       body: tableRows,
       margin: { left: margin, right: margin },
-      styles: {
-        font: 'helvetica',
-        fontSize: 9,
-        cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
-        textColor: [26, 25, 22],
-        lineColor: [226, 221, 215],
-        lineWidth: 0.3,
-      },
-      headStyles: {
-        fillColor: [247, 246, 243],
-        textColor: [122, 117, 112],
-        fontStyle: 'normal',
-        fontSize: 8,
-      },
-      alternateRowStyles: { fillColor: [252, 251, 249] },
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: {top:4,bottom:4,left:4,right:4}, textColor:[28,22,48], lineColor:[216,208,245], lineWidth:0.3 },
+      headStyles: { fillColor:[237,232,255], textColor:[90,82,112], fontStyle:'normal', fontSize:8 },
+      alternateRowStyles: { fillColor:[249,247,255] },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { cellWidth: 32, halign: 'center' },
+        1: { cellWidth: 28, halign: 'center' },
         2: { cellWidth: 28, halign: 'center' },
         3: { cellWidth: 18, halign: 'center' },
       },
-      didParseCell(data) {
-        if (data.column.index === 3 && data.section === 'body') {
-          const v = data.cell.raw;
-          if (v === '✓') data.cell.styles.textColor = [16, 185, 129];
-          else if (v === '!') data.cell.styles.textColor = [245, 158, 11];
-          else data.cell.styles.textColor = [239, 68, 68];
+      didParseCell(d) {
+        if (d.column.index === 3 && d.section === 'body') {
+          const v = d.cell.raw;
+          if (v==='✓') d.cell.styles.textColor = [16,185,129];
+          else if (v==='!') d.cell.styles.textColor = [245,158,11];
+          else { d.cell.styles.textColor = [220,38,38]; d.cell.styles.fontStyle = 'bold'; }
         }
       },
       didDrawPage() {},
     });
-
     y = doc.lastAutoTable.finalY + 10;
   });
 
-  // Footer on every page
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(176, 170, 164);
-    doc.text(`Pagina ${i} di ${pages}`, pageW / 2, pageH - 10, { align: 'center' });
-    doc.text(`materiali oratori — ${state.current}`, margin, pageH - 10);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(176,170,200);
+    doc.text(`Pagina ${i} di ${pages}`, pageW/2, pageH-10, {align:'center'});
+    doc.text(`Lucas' Toolbox — ${state.current}`, margin, pageH-10);
   }
 
-  doc.save(`materiali-${state.current.toLowerCase().replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.pdf`);
-  showToast('PDF esportato');
+  doc.save(`toolbox-${state.current.toLowerCase().replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.pdf`);
+  showToast('PDF esportato 📄');
 }
 
-/* ────────────────────────────────────────────
-   EVENT LISTENERS (modal & keyboard)
-──────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal')) closeModal();
-  });
-
-  document.getElementById('modal-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') confirmAddOratorio();
-    if (e.key === 'Escape') closeModal();
-  });
-
-  render();
+/* ════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAllModals();
+  if ((e.key === 'Enter') && document.getElementById('modal-oratorio').classList.contains('open')) confirmOratorio();
+  if ((e.key === 'Enter') && document.getElementById('modal-cat').classList.contains('open')) confirmCat();
 });
+
+/* Sort pills sync on load */
+document.querySelectorAll('#cat-sort-pills .sort-pill').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#cat-sort-pills .sort-pill').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+render();
