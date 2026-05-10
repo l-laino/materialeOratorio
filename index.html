@@ -1,115 +1,235 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lucas' Toolbox</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lucas' Toolbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="logo">
+          <span class="logo-emoji">🧰</span>
+          <span class="logo-text">Attrezzi <em>Tabajara</em></span>
+        </div>
+        <div class="topbar-actions">
+          <button
+            class="btn btn-import"
+            onclick="document.getElementById('import-file-input').click()"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Importa PDF
+          </button>
+          <input
+            type="file"
+            id="import-file-input"
+            accept=".pdf"
+            style="display: none"
+            onchange="importPDF(this)"
+          />
+          <button class="btn btn-pdf" onclick="exportPDF()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            Esporta PDF
+          </button>
+        </div>
+      </div>
+    </header>
 
-<header class="topbar">
-  <div class="topbar-inner">
-    <div class="logo">
-      <span class="logo-emoji">🧰</span>
-      <span class="logo-text">Lucas' <em>Toolbox</em></span>
-    </div>
-    <div class="topbar-actions">
-      <button class="btn btn-pdf" onclick="exportPDF()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Esporta PDF
-      </button>
-    </div>
-  </div>
-</header>
+    <main class="main">
+      <!-- Oratori -->
+      <section class="oratorio-section">
+        <div class="section-heading">
+          <span class="section-label">📍 Oratorio</span>
+        </div>
+        <div class="oratorio-bar">
+          <div class="oratorio-tabs" id="oratorio-tabs" role="tablist"></div>
+          <button class="btn btn-new-oratorio" onclick="openModalAddOratorio()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nuovo
+          </button>
+        </div>
+      </section>
 
-<main class="main">
+      <!-- Summary -->
+      <div class="summary" id="summary"></div>
 
-  <!-- Oratori -->
-  <section class="oratorio-section">
-    <div class="section-heading">
-      <span class="section-label">📍 Oratorio</span>
-    </div>
-    <div class="oratorio-bar">
-      <div class="oratorio-tabs" id="oratorio-tabs" role="tablist"></div>
-      <button class="btn btn-new-oratorio" onclick="openModalAddOratorio()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nuovo
-      </button>
-    </div>
-  </section>
+      <!-- Toolbar categories -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span class="toolbar-title">Categorie</span>
+          <button class="btn btn-add-cat" onclick="openModalAddCat()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="15"
+              height="15"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nuova categoria
+          </button>
+        </div>
+        <div class="toolbar-right">
+          <span class="sort-label">Ordina:</span>
+          <div class="sort-pills" id="cat-sort-pills">
+            <button class="sort-pill active" onclick="setCatSort('custom')">
+              Manuale
+            </button>
+            <button class="sort-pill" onclick="setCatSort('alpha')">A→Z</button>
+          </div>
+        </div>
+      </div>
 
-  <!-- Summary -->
-  <div class="summary" id="summary"></div>
+      <!-- Categories container -->
+      <div class="categories" id="categories"></div>
+    </main>
 
-  <!-- Toolbar categories -->
-  <div class="toolbar">
-    <div class="toolbar-left">
-      <span class="toolbar-title">Categorie</span>
-      <button class="btn btn-add-cat" onclick="openModalAddCat()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nuova categoria
-      </button>
-    </div>
-    <div class="toolbar-right">
-      <span class="sort-label">Ordina:</span>
-      <div class="sort-pills" id="cat-sort-pills">
-        <button class="sort-pill active" onclick="setCatSort('custom')">Manuale</button>
-        <button class="sort-pill" onclick="setCatSort('alpha')">A→Z</button>
+    <!-- OVERLAY -->
+    <div
+      class="modal-overlay"
+      id="modal-overlay"
+      onclick="closeAllModals()"
+    ></div>
+
+    <!-- MODAL: Oratorio (add / rename) -->
+    <div class="modal" id="modal-oratorio" role="dialog" aria-modal="true">
+      <button class="modal-close" onclick="closeAllModals()">✕</button>
+      <div class="modal-icon-big" id="modal-oratorio-icon">🏫</div>
+      <h3 class="modal-title" id="modal-oratorio-title">Nuovo oratorio</h3>
+      <div class="modal-field">
+        <label for="input-oratorio-name">Nome</label>
+        <input
+          type="text"
+          id="input-oratorio-name"
+          placeholder="es. Pombio"
+          autocomplete="off"
+        />
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeAllModals()">
+          Annulla
+        </button>
+        <button
+          class="btn btn-primary"
+          id="btn-confirm-oratorio"
+          onclick="confirmOratorio()"
+        >
+          Aggiungi
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- Categories container -->
-  <div class="categories" id="categories"></div>
+    <!-- MODAL: Category (add / rename) -->
+    <div class="modal" id="modal-cat" role="dialog" aria-modal="true">
+      <button class="modal-close" onclick="closeAllModals()">✕</button>
+      <div class="modal-icon-big" id="modal-cat-preview">📦</div>
+      <h3 class="modal-title" id="modal-cat-title">Nuova categoria</h3>
+      <div class="modal-field">
+        <label for="input-cat-name">Nome</label>
+        <input
+          type="text"
+          id="input-cat-name"
+          placeholder="es. Bevande"
+          autocomplete="off"
+        />
+      </div>
+      <div class="modal-field">
+        <label>Icona</label>
+        <div class="icon-picker" id="icon-picker"></div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeAllModals()">
+          Annulla
+        </button>
+        <button
+          class="btn btn-primary"
+          id="btn-confirm-cat"
+          onclick="confirmCat()"
+        >
+          Salva
+        </button>
+      </div>
+    </div>
 
-</main>
+    <!-- MODAL: Import preview -->
+    <div
+      class="modal modal-wide"
+      id="modal-import"
+      role="dialog"
+      aria-modal="true"
+    >
+      <button class="modal-close" onclick="closeAllModals()">✕</button>
+      <div class="modal-icon-big">📥</div>
+      <h3 class="modal-title">Importa da PDF</h3>
+      <div id="import-summary" class="import-summary"></div>
+      <div id="import-preview" class="import-preview"></div>
+      <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeAllModals()">
+          Annulla
+        </button>
+        <button
+          class="btn btn-primary"
+          id="btn-confirm-import"
+          onclick="confirmImport()"
+        >
+          Importa dati
+        </button>
+      </div>
+    </div>
 
-<!-- OVERLAY -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+    <!-- TOAST -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- MODAL: Oratorio (add / rename) -->
-<div class="modal" id="modal-oratorio" role="dialog" aria-modal="true">
-  <button class="modal-close" onclick="closeAllModals()">✕</button>
-  <div class="modal-icon-big" id="modal-oratorio-icon">🏫</div>
-  <h3 class="modal-title" id="modal-oratorio-title">Nuovo oratorio</h3>
-  <div class="modal-field">
-    <label for="input-oratorio-name">Nome</label>
-    <input type="text" id="input-oratorio-name" placeholder="es. Pombio" autocomplete="off" />
-  </div>
-  <div class="modal-btns">
-    <button class="btn btn-ghost" onclick="closeAllModals()">Annulla</button>
-    <button class="btn btn-primary" id="btn-confirm-oratorio" onclick="confirmOratorio()">Aggiungi</button>
-  </div>
-</div>
-
-<!-- MODAL: Category (add / rename) -->
-<div class="modal" id="modal-cat" role="dialog" aria-modal="true">
-  <button class="modal-close" onclick="closeAllModals()">✕</button>
-  <div class="modal-icon-big" id="modal-cat-preview">📦</div>
-  <h3 class="modal-title" id="modal-cat-title">Nuova categoria</h3>
-  <div class="modal-field">
-    <label for="input-cat-name">Nome</label>
-    <input type="text" id="input-cat-name" placeholder="es. Bevande" autocomplete="off" />
-  </div>
-  <div class="modal-field">
-    <label>Icona</label>
-    <div class="icon-picker" id="icon-picker"></div>
-  </div>
-  <div class="modal-btns">
-    <button class="btn btn-ghost" onclick="closeAllModals()">Annulla</button>
-    <button class="btn btn-primary" id="btn-confirm-cat" onclick="confirmCat()">Salva</button>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script src="app.js"></script>
-</body>
+    <script src="app.js"></script>
+  </body>
 </html>

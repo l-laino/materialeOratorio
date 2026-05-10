@@ -705,20 +705,34 @@ function exportPDF() {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const margin = 18;
+  const margin = 16;
+  const contentW = pageW - margin * 2;
   const now = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
 
-  doc.setFillColor(245, 243, 255);
-  doc.roundedRect(margin, 12, pageW - margin*2, 22, 3, 3, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.setTextColor(28, 22, 48);
-  doc.text(`Lucas' Toolbox — ${state.current}`, margin + 6, 22);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(90, 82, 112);
-  doc.text(`Esportato il ${now}`, pageW - margin - 2, 22, { align: 'right' });
+  // ── COVER HEADER ──
+  // Top accent bar
+  doc.setFillColor(180, 160, 255); // pastel violet
+  doc.rect(0, 0, pageW, 6, 'F');
 
+  // Title block
+  doc.setFillColor(245, 242, 255);
+  doc.roundedRect(margin, 12, contentW, 28, 4, 4, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(40, 28, 80);
+  doc.text("Lucas' Toolbox", margin + 8, 24);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(100, 85, 150);
+  doc.text(`Oratorio: ${state.current}`, margin + 8, 32);
+
+  doc.setFontSize(8);
+  doc.setTextColor(150, 135, 190);
+  doc.text(`Esportato il ${now}`, pageW - margin - 2, 32, { align: 'right' });
+
+  // ── SUMMARY BOXES ──
   const data = cur();
   let totOk=0, totWarn=0, totMiss=0, totTot=0;
   state.categories.forEach(cat => {
@@ -728,64 +742,138 @@ function exportPDF() {
       if(s==='ok') totOk++; else if(s==='warn') totWarn++; else totMiss++;
     });
   });
-  doc.setFontSize(8.5);
-  doc.setTextColor(90, 82, 112);
-  doc.text(`${totTot} voci · ${totOk} ok · ${totWarn} in scarsità · ${totMiss} mancanti`, margin + 6, 30);
 
-  let y = 44;
+  const boxW = (contentW - 9) / 4;
+  const boxes = [
+    { label: 'Totale voci', val: totTot, fill: [230, 225, 255], text: [40, 28, 80] },
+    { label: 'Sufficienti', val: totOk,  fill: [210, 242, 225], text: [20, 80, 50] },
+    { label: 'In scarsità', val: totWarn,fill: [255, 243, 205], text: [100, 65, 10] },
+    { label: 'Mancanti',    val: totMiss,fill: [255, 215, 215], text: [130, 30, 30] },
+  ];
+  boxes.forEach((b, i) => {
+    const bx = margin + i * (boxW + 3);
+    const by = 46;
+    doc.setFillColor(...b.fill);
+    doc.roundedRect(bx, by, boxW, 18, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(...b.text);
+    doc.text(String(b.val), bx + boxW / 2, by + 10, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...b.text);
+    doc.text(b.label.toUpperCase(), bx + boxW / 2, by + 15.5, { align: 'center' });
+  });
 
+  let y = 74;
+
+  // ── CATEGORIES ──
   state.categories.forEach(cat => {
     const items = (data[cat.id] || []);
     if (!items.length) return;
-    if (y > pageH - 50) { doc.addPage(); y = 20; }
+    if (y > pageH - 55) { doc.addPage(); y = 20; }
 
-    doc.setFillColor(220, 214, 255);
-    doc.roundedRect(margin, y - 4, pageW - margin*2, 10, 2, 2, 'F');
+    // Category title bar (no icon)
+    doc.setFillColor(210, 200, 250); // pastel violet
+    doc.roundedRect(margin, y - 3, contentW, 11, 2, 2, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.setTextColor(28, 22, 48);
-    doc.text(`${cat.icon}  ${cat.label.toUpperCase()}`, margin + 4, y + 3);
-    y += 12;
+    doc.setFontSize(9);
+    doc.setTextColor(40, 28, 80);
+    doc.text(cat.label.toUpperCase(), margin + 5, y + 4.5);
 
+    // Item count on right
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 85, 150);
+    doc.text(`${items.length} voci`, pageW - margin - 3, y + 4.5, { align: 'right' });
+    y += 13;
+
+    // Build rows with status
     const tableRows = items.map(item => {
       const s = getStatus(item);
-      return [item.name, item.min.toString(), item.have.toString(),
-        s === 'ok' ? '✓' : s === 'warn' ? '!' : '✗'];
+      const stato = s === 'ok' ? 'Sufficiente' : s === 'warn' ? 'In scarsità' : 'Mancante';
+      return { row: [item.name, item.min.toString(), item.have.toString(), stato], status: s };
     });
 
     doc.autoTable({
       startY: y,
-      head: [['Materiale', 'Min.', 'Disponibili', 'Stato']],
-      body: tableRows,
+      head: [['Materiale', 'Min. necessario', 'Disponibili', 'Stato']],
+      body: tableRows.map(r => r.row),
       margin: { left: margin, right: margin },
-      styles: { font: 'helvetica', fontSize: 9, cellPadding: {top:4,bottom:4,left:4,right:4}, textColor:[28,22,48], lineColor:[216,208,245], lineWidth:0.3 },
-      headStyles: { fillColor:[237,232,255], textColor:[90,82,112], fontStyle:'normal', fontSize:8 },
-      alternateRowStyles: { fillColor:[249,247,255] },
+      styles: {
+        font: 'helvetica',
+        fontSize: 9,
+        cellPadding: { top: 4, bottom: 4, left: 5, right: 5 },
+        textColor: [40, 28, 80],
+        lineColor: [220, 215, 240],
+        lineWidth: 0.25,
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: [235, 230, 255],
+        textColor: [100, 85, 150],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+        cellPadding: { top: 4, bottom: 4, left: 5, right: 5 },
+      },
+      // No alternateRowStyles — we override everything in didParseCell
+      alternateRowStyles: { fillColor: null },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { cellWidth: 28, halign: 'center' },
-        2: { cellWidth: 28, halign: 'center' },
-        3: { cellWidth: 18, halign: 'center' },
+        1: { cellWidth: 34, halign: 'center' },
+        2: { cellWidth: 30, halign: 'center' },
+        3: { cellWidth: 34, halign: 'center' },
       },
       didParseCell(d) {
-        if (d.column.index === 3 && d.section === 'body') {
-          const v = d.cell.raw;
-          if (v==='✓') d.cell.styles.textColor = [16,185,129];
-          else if (v==='!') d.cell.styles.textColor = [245,158,11];
-          else { d.cell.styles.textColor = [220,38,38]; d.cell.styles.fontStyle = 'bold'; }
+        if (d.section !== 'body') return;
+        const s = tableRows[d.row.index]?.status;
+        if (s === 'ok') {
+          // Pastel green
+          d.cell.styles.fillColor = [220, 245, 230];
+          if (d.column.index === 3) {
+            d.cell.styles.textColor = [20, 100, 60];
+            d.cell.styles.fontStyle = 'bold';
+          } else {
+            d.cell.styles.textColor = [40, 80, 55];
+          }
+        } else if (s === 'warn') {
+          // Pastel yellow
+          d.cell.styles.fillColor = [255, 248, 210];
+          if (d.column.index === 3) {
+            d.cell.styles.textColor = [130, 85, 10];
+            d.cell.styles.fontStyle = 'bold';
+          } else {
+            d.cell.styles.textColor = [100, 70, 20];
+          }
+        } else {
+          // Pastel red
+          d.cell.styles.fillColor = [255, 220, 220];
+          if (d.column.index === 3) {
+            d.cell.styles.textColor = [160, 30, 30];
+            d.cell.styles.fontStyle = 'bold';
+          } else {
+            d.cell.styles.textColor = [120, 40, 40];
+          }
         }
       },
       didDrawPage() {},
     });
+
     y = doc.lastAutoTable.finalY + 10;
   });
 
+  // ── FOOTER on every page ──
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(176,170,200);
-    doc.text(`Pagina ${i} di ${pages}`, pageW/2, pageH-10, {align:'center'});
-    doc.text(`Lucas' Toolbox — ${state.current}`, margin, pageH-10);
+    // bottom accent bar
+    doc.setFillColor(180, 160, 255);
+    doc.rect(0, pageH - 5, pageW, 5, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(150, 135, 190);
+    doc.text(`Pagina ${i} di ${pages}`, pageW / 2, pageH - 8, { align: 'center' });
+    doc.text(`Lucas' Toolbox — ${state.current}`, margin, pageH - 8);
   }
 
   doc.save(`toolbox-${state.current.toLowerCase().replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.pdf`);
@@ -793,8 +881,274 @@ function exportPDF() {
 }
 
 /* ════════════════════════════════════════════
-   KEYBOARD SHORTCUTS
+   PDF IMPORT
 ════════════════════════════════════════════ */
+
+// Holds the parsed data before user confirms
+let pendingImport = null;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function importPDF(input) {
+  const file = input.files[0];
+  input.value = ''; // reset so same file can be re-selected
+  if (!file) return;
+
+  showToast('Lettura PDF in corso…');
+
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+
+    // Extract all text items with their y-position across all pages
+    const allItems = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const tc = await page.getTextContent();
+      // Normalise y: PDF y is from bottom, we flip it; add page offset
+      tc.items.forEach(item => {
+        const str = item.str.trim();
+        if (!str) return;
+        allItems.push({
+          str,
+          x: Math.round(item.transform[4]),
+          // use negative y so top-of-page = smallest number, easy to sort
+          y: Math.round(item.transform[5]) * -1 + p * 10000,
+          h: Math.round(item.height),
+          page: p,
+        });
+      });
+    }
+
+    const parsed = parsePDFItems(allItems);
+    if (!parsed) {
+      showToast('❌ PDF non riconosciuto — usa solo PDF esportati da Lucas\' Toolbox');
+      return;
+    }
+
+    pendingImport = parsed;
+    showImportPreview(parsed);
+  } catch (err) {
+    console.error(err);
+    showToast('❌ Errore lettura PDF');
+  }
+}
+
+/**
+ * Parses the flat list of text items from PDF.js into structured data.
+ *
+ * The PDF structure we produce is:
+ *   "Lucas' Toolbox"   (title)
+ *   "Oratorio: {name}" (oratorio line)
+ *   "Esportato il …"
+ *   summary numbers & labels (4 boxes)
+ *   For each category:
+ *     "{CAT LABEL}" "{N} voci"
+ *     "Materiale" "Min. necessario" "Disponibili" "Stato"   (table header)
+ *     "{name}" "{min}" "{have}" "{Sufficiente|In scarsità|Mancante}"  (rows)
+ *
+ * PDF.js returns items in approximate reading order (top→bottom, left→right).
+ * We identify rows by grouping items with the same y-coordinate.
+ */
+function parsePDFItems(items) {
+  // ── Find oratorio name ──
+  let oratorioName = null;
+  for (const it of items) {
+    if (it.str.startsWith('Oratorio:')) {
+      oratorioName = it.str.replace('Oratorio:', '').trim();
+      break;
+    }
+    // sometimes split across two items
+  }
+  // Fallback: next item after "Oratorio:"
+  if (!oratorioName) {
+    for (let i = 0; i < items.length - 1; i++) {
+      if (items[i].str === 'Oratorio:') {
+        oratorioName = items[i+1].str.trim();
+        break;
+      }
+    }
+  }
+  if (!oratorioName) return null;
+
+  // ── Group items by y-row (items within 3px of each other are same row) ──
+  const rows = [];
+  let currentY = null;
+  let currentRow = [];
+  for (const it of items) {
+    if (currentY === null || Math.abs(it.y - currentY) > 4) {
+      if (currentRow.length) rows.push(currentRow);
+      currentRow = [it];
+      currentY = it.y;
+    } else {
+      currentRow.push(it);
+    }
+  }
+  if (currentRow.length) rows.push(currentRow);
+
+  // ── Known noise strings to skip ──
+  const NOISE = new Set([
+    "Lucas' Toolbox", 'Oratorio:', 'Esportato il',
+    'Materiale', 'Min. necessario', 'Disponibili', 'Stato',
+    'Totale voci', 'Sufficienti', 'In scarsità', 'Mancanti',
+    'TOTALE VOCI', 'SUFFICIENTI', 'IN SCARSITÀ', 'MANCANTI',
+    'Sufficiente', 'In scarsità', 'Mancante',
+  ]);
+
+  const STATUS_WORDS = new Set(['Sufficiente', 'In scarsità', 'Mancante']);
+  const CAT_SUFFIX = ' voci'; // category rows end with "{N} voci"
+
+  const categories = [];
+  let currentCat = null;
+
+  for (const row of rows) {
+    const texts = row.map(i => i.str).join(' ').trim();
+    const strs = row.map(i => i.str.trim()).filter(Boolean);
+
+    // ── Skip header / noise rows ──
+    if (strs.length === 0) continue;
+    if (strs.some(s => s.startsWith("Lucas' Toolbox"))) continue;
+    if (strs.some(s => s.startsWith('Oratorio:'))) continue;
+    if (strs.some(s => s.startsWith('Esportato il'))) continue;
+    if (strs.some(s => s.startsWith('Pagina '))) continue;
+    // Skip table header row
+    if (strs.includes('Materiale') && strs.includes('Disponibili')) continue;
+    // Skip pure summary rows (only numbers and labels like SUFFICIENTI)
+    if (strs.every(s => /^\d+$/.test(s) || NOISE.has(s) ||
+        ['TOTALE VOCI','SUFFICIENTI','IN SCARSITÀ','MANCANTI'].includes(s.toUpperCase()))) continue;
+
+    // ── Detect category header ──
+    // Pattern: one or two items, second ends with " voci" OR row has "{NAME}" and "{N} voci"
+    const vocePart = strs.find(s => /^\d+\s+voci$/.test(s));
+    const isHeader = vocePart !== null && strs.length <= 3 &&
+      !STATUS_WORDS.has(strs[0]);
+
+    if (isHeader) {
+      // Category name = everything except the "{N} voci" part
+      const nameparts = strs.filter(s => s !== vocePart);
+      const label = nameparts.join(' ').trim();
+      if (label && label !== 'Materiale') {
+        currentCat = { label, items: [] };
+        categories.push(currentCat);
+      }
+      continue;
+    }
+
+    // ── Detect data row ──
+    // A data row has: name, number, number, status-word
+    // With PDF.js items may be split, so we collect all strs in the row
+    // and try to match the pattern from the right: last=status, second-to-last=have, third-to-last=min
+    if (!currentCat) continue;
+
+    const s = strs[strs.length - 1];
+    if (!STATUS_WORDS.has(s)) continue; // last item must be a status word
+
+    const haveStr = strs[strs.length - 2];
+    const minStr  = strs[strs.length - 3];
+
+    if (!/^\d+$/.test(haveStr) || !/^\d+$/.test(minStr)) continue;
+
+    const name = strs.slice(0, strs.length - 3).join(' ').trim();
+    if (!name) continue;
+
+    const have = parseInt(haveStr, 10);
+    const min  = parseInt(minStr,  10);
+
+    currentCat.items.push({ name, min, have });
+  }
+
+  if (!categories.length) return null;
+  return { oratorioName, categories };
+}
+
+function showImportPreview(parsed) {
+  const { oratorioName, categories } = parsed;
+  const isNew = !state.list.includes(oratorioName);
+
+  // Summary line
+  const totalItems = categories.reduce((s, c) => s + c.items.length, 0);
+  const summaryEl = document.getElementById('import-summary');
+  summaryEl.innerHTML = `
+    <span>📍 Oratorio: <span class="chip">${esc(oratorioName)}</span>${isNew ? ' <span class="import-new-badge">NUOVO</span>' : ''}</span>
+    <span>📂 <span class="chip">${categories.length}</span> categorie</span>
+    <span>📋 <span class="chip">${totalItems}</span> voci</span>
+  `;
+
+  // Per-category preview
+  const previewEl = document.getElementById('import-preview');
+  let html = `<div class="import-oratorio-info">
+    📥 Dati da importare ${isNew ? `— verrà creato un nuovo oratorio "<strong>${esc(oratorioName)}</strong>"` : `— sovrascrive "<strong>${esc(oratorioName)}</strong>"`}
+  </div>`;
+
+  categories.forEach(cat => {
+    const existingCat = state.categories.find(c =>
+      c.label.toLowerCase() === cat.label.toLowerCase()
+    );
+    const isNewCat = !existingCat;
+
+    html += `<div class="import-cat-block">
+      <div class="import-cat-label">
+        ${existingCat ? existingCat.icon : '📦'} ${esc(cat.label)}
+        ${isNewCat ? '<span class="import-new-badge">NUOVA</span>' : ''}
+      </div>`;
+
+    cat.items.forEach(item => {
+      const s = item.have === 0 && item.min > 0 ? 'miss' : item.have < item.min ? 'warn' : 'ok';
+      const statoLabel = s === 'ok' ? 'Sufficiente' : s === 'warn' ? 'In scarsità' : 'Mancante';
+      html += `<div class="import-row ${s}">
+        <span class="import-row-name">${esc(item.name)}</span>
+        <span class="import-row-val">${item.min}</span>
+        <span class="import-row-val">${item.have}</span>
+        <span class="import-row-stato ${s}">${statoLabel}</span>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  previewEl.innerHTML = html;
+  openModal('modal-import');
+}
+
+function confirmImport() {
+  if (!pendingImport) return;
+  const { oratorioName, categories } = pendingImport;
+
+  // Ensure oratorio exists in state
+  if (!state.list.includes(oratorioName)) {
+    state.list.push(oratorioName);
+    state.data[oratorioName] = {};
+  }
+
+  // For each imported category, find or create it in state.categories
+  categories.forEach(cat => {
+    let existing = state.categories.find(c =>
+      c.label.toLowerCase() === cat.label.toLowerCase()
+    );
+    if (!existing) {
+      const id = 'cat_' + uid();
+      existing = { id, label: cat.label, icon: '📦' };
+      state.categories.push(existing);
+      // Initialise empty array for all other oratori
+      state.list.forEach(o => {
+        if (!state.data[o]) state.data[o] = {};
+        if (!state.data[o][existing.id]) state.data[o][existing.id] = [];
+      });
+    }
+    // Overwrite items for this oratorio + category
+    state.data[oratorioName][existing.id] = cat.items.map(i => ({
+      name: i.name, min: i.min, have: i.have
+    }));
+  });
+
+  state.current = oratorioName;
+  pendingImport = null;
+  save();
+  closeAllModals();
+  render();
+  showToast(`✅ Importato "${oratorioName}" — ${categories.length} categorie`);
+}
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeAllModals();
   if ((e.key === 'Enter') && document.getElementById('modal-oratorio').classList.contains('open')) confirmOratorio();
