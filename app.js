@@ -1074,7 +1074,7 @@ function exportPDF() {
     doc.text(`Pagina ${i} di ${pages}`, pageW / 2, pageH - 8, {
       align: "center",
     });
-    doc.text(`Lucas' Toolbox — ${state.current}`, margin, pageH - 8);
+    doc.text(`OraBox Kit — ${state.current}`, margin, pageH - 8);
   }
 
   doc.save(
@@ -1127,7 +1127,7 @@ async function importPDF(input) {
     const parsed = parsePDFItems(allItems);
     if (!parsed) {
       showToast(
-        "❌ PDF non riconosciuto — usa solo PDF esportati da Lucas' Toolbox",
+        "❌ PDF non riconosciuto — usa solo PDF esportati da OraBox Kit",
       );
       return;
     }
@@ -1144,7 +1144,7 @@ async function importPDF(input) {
  * Parses the flat list of text items from PDF.js into structured data.
  *
  * The PDF structure we produce is:
- *   "Lucas' Toolbox"   (title)
+ *   "OraBox Kit"   (title)
  *   "Oratorio: {name}" (oratorio line)
  *   "Esportato il …"
  *   summary numbers & labels (4 boxes)
@@ -1194,7 +1194,7 @@ function parsePDFItems(items) {
 
   // ── Known noise strings to skip ──
   const NOISE = new Set([
-    "Lucas' Toolbox",
+    "OraBox Kit",
     "Oratorio:",
     "Esportato il",
     "Materiale",
@@ -1229,7 +1229,7 @@ function parsePDFItems(items) {
 
     // ── Skip header / noise rows ──
     if (strs.length === 0) continue;
-    if (strs.some((s) => s.startsWith("Lucas' Toolbox"))) continue;
+    if (strs.some((s) => s.startsWith("OraBox Kit"))) continue;
     if (strs.some((s) => s.startsWith("Oratorio:"))) continue;
     if (strs.some((s) => s.startsWith("Esportato il"))) continue;
     if (strs.some((s) => s.startsWith("Pagina "))) continue;
