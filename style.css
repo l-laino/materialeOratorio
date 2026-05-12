@@ -880,3 +880,192 @@ td.c { text-align: center; }
   .cat-footer { padding: 10px 16px; }
   .logo-text { font-size: 17px; }
 }
+
+/* ══════════════════════════════════════════
+   JSON EXPORT / IMPORT BUTTONS
+══════════════════════════════════════════ */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.btn-json-import {
+  background: var(--surface2);
+  color: #059669;
+  border-color: #a7f3d0;
+  font-size: 13px;
+  padding: 7px 12px;
+  gap: 5px;
+}
+.btn-json-import:hover { background: #ecfdf5; border-color: #059669; }
+.btn-json-import svg { width: 13px; height: 13px; }
+
+.btn-json-export {
+  background: var(--surface2);
+  color: #059669;
+  border-color: #a7f3d0;
+  font-size: 13px;
+  padding: 7px 12px;
+  gap: 5px;
+}
+.btn-json-export:hover { background: #ecfdf5; border-color: #059669; }
+.btn-json-export svg { width: 13px; height: 13px; }
+
+/* ── SYNC BANNER ── */
+.sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #065f46;
+  margin-bottom: 1rem;
+}
+.sync-banner svg { color: #059669; flex-shrink: 0; }
+
+/* ══════════════════════════════════════════
+   INLINE EDIT INPUT (rinomina voce cliccando)
+══════════════════════════════════════════ */
+.item-name-text {
+  cursor: text;
+  border-bottom: 1.5px dashed transparent;
+  transition: border-color var(--t);
+  padding-bottom: 1px;
+}
+.item-name-text:hover {
+  border-bottom-color: var(--violet);
+  color: var(--violet-dark);
+}
+
+.inline-edit-input {
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  border: 1.5px solid var(--violet);
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: var(--violet-light);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--violet-glow);
+  min-width: 140px;
+}
+.inline-edit-input.sub {
+  font-size: 13px;
+  min-width: 110px;
+}
+
+/* ══════════════════════════════════════════
+   SUB-ITEMS (lista di tipi)
+══════════════════════════════════════════ */
+.item-group-header td {
+  background: #f5f2ff !important;
+  font-weight: 700;
+}
+.item-group-header:hover td { background: #ede8ff !important; }
+
+.has-subs { color: var(--violet-dark); }
+
+.sub-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: var(--violet-light);
+  color: var(--violet-dark);
+  border-radius: 99px;
+  border: 1px solid var(--border2);
+}
+
+.subitem-row td {
+  padding: 7px 22px 7px 44px !important;
+  font-size: 14px;
+  background: #faf9ff;
+  border-bottom-color: #ede8ff !important;
+}
+.subitem-row:last-child td { border-bottom: none; }
+.subitem-row:hover td { background: #f0ecff !important; }
+.subitem-row.row-miss td { background: #fff5f5 !important; }
+.subitem-row.row-warn td { background: #fffbf0 !important; }
+
+.subitem-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.subitem-name {
+  font-weight: 500;
+  color: var(--text-mid);
+  cursor: text;
+  border-bottom: 1.5px dashed transparent;
+  transition: border-color var(--t);
+  padding-bottom: 1px;
+}
+.subitem-name:hover {
+  border-bottom-color: var(--violet);
+  color: var(--violet-dark);
+}
+
+/* Totali calcolati per l'item padre */
+.total-chip {
+  display: inline-block;
+  font-family: 'Figtree', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--violet-dark);
+  background: var(--violet-light);
+  padding: 4px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border2);
+}
+
+/* Add sub-item row */
+.add-subitem-row td {
+  padding: 6px 22px 6px 44px !important;
+  background: #f5f2ff;
+}
+.add-subitem-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.add-input.sub {
+  flex: 1;
+  font-size: 13px;
+  padding: 5px 10px;
+}
+
+.add-subitem-trigger-row td {
+  padding: 4px 22px 4px 44px !important;
+  background: #faf9ff;
+  border-bottom: none !important;
+}
+.btn-add-sub {
+  background: none;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--violet);
+  cursor: pointer;
+  padding: 3px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.7;
+  transition: opacity var(--t);
+}
+.btn-add-sub:hover { opacity: 1; }
+
+/* ── RESPONSIVE aggiornato ── */
+@media (max-width: 640px) {
+  .topbar-actions { gap: 4px; }
+  .btn-json-import, .btn-json-export { padding: 6px 8px; font-size: 12px; }
+  .sync-banner { font-size: 12px; }
+  .subitem-row td { padding-left: 28px !important; }
+}
